@@ -151,10 +151,11 @@ with st.sidebar:
     st.divider()
 
     # LLM provider selection
+    provider_options = ["groq", "openai", "gemini"]
     provider = st.selectbox(
         "LLM Provider",
-        options=["groq", "openai", "gemini"],
-        index=1,
+        options=provider_options,
+        index=provider_options.index(cfg.DEFAULT_LLM_PROVIDER) if cfg.DEFAULT_LLM_PROVIDER in provider_options else 0,
         help="Choose which model powers the assistant.",
     )
 

@@ -24,7 +24,7 @@ SERPER_API_KEY = os.getenv("SERPER_API_KEY")
 OPEN_ROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 # LLM settings
-DEFAULT_LLM_PROVIDER = "openai"
+DEFAULT_LLM_PROVIDER = "gemini"
 
 GROQ_MODEL_NAME   = "llama-3.1-8b-instant"
 OPENAI_MODEL_NAME = "gpt-4o-mini"

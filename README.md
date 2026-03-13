@@ -1,186 +1,139 @@
-# ResearchIQ — Intelligent Research Assistant
+# ResearchIQ - Intelligent Research Assistant
 
-A context-aware AI research assistant built for the **NeoStats AI Engineer Case Study**. ResearchIQ combines document-based knowledge retrieval (RAG) with live web search inside a LangGraph ReAct agent, giving users a single interface to query their own files and the open web — with full control over how answers are generated.
+ResearchIQ is a Streamlit-based assistant built for the NeoStats AI Engineer use case. It combines document Q&A (RAG) with live web search and supports Groq, OpenAI, and Gemini in one interface.
 
-**Live Demo:** [Deploy link will go here after Streamlit Cloud deployment]
+Live Demo: Add your Streamlit Cloud link here after deployment.
 
----
+## Why this project
 
-## Why This Exists
-
-The problem with most AI assistants is that they either know only what they were trained on, or they only search the web. Neither is sufficient for research work. You often need to cross-reference your own documents with current information — and you want the AI to decide intelligently which source to use without you having to specify it every time.
-
-ResearchIQ solves this with a ReAct agent that reasons about every query before acting. It picks the right tool, calls it, reads the result, and then composes an answer. The user just asks questions.
-
----
+Most assistants are good at either static knowledge or current events, not both. This project solves that gap by letting users query uploaded files and the web from the same chat session, with clear control over how responses are generated.
 
 ## Features
 
 ### 1. Document Q&A with RAG
-Upload your own files and turn them into a searchable knowledge base instantly.
 
-- Supports **PDF, TXT, and DOCX** formats
-- Multiple files can be uploaded and merged into one unified index
-- Documents are chunked (1000 chars, 200 overlap) and embedded using a local HuggingFace model
-- **FAISS KNN search** retrieves the top 7 most semantically relevant chunks per query
-- A dedicated retrieval LLM (temperature=0) synthesizes answers strictly from those chunks — no hallucination, no filling in gaps
-- Every answer cites its source (document name + page number where available)
+- Upload PDF, TXT, and DOCX files
+- Split documents into chunks with overlap for context continuity
+- Create embeddings locally using all-MiniLM-L6-v2
+- Store vectors in FAISS and retrieve top relevant chunks
+- Generate grounded answers from retrieved chunks with source references
 
 ### 2. Live Web Search
-When your documents don't have the answer — or when you need something current — the agent searches the web.
 
-- Powered by the **Serper API** (Google Search wrapper)
-- Returns real-time results with titles, snippets, and source URLs
-- The agent decides on its own when a query needs web search vs document search
-- Can combine both sources in a single response when the question benefits from it
+- Uses Serper API for real-time web results
+- Returns cleanly formatted sources and snippets
+- Handles timeout and API errors with readable fallback messages
 
-### 3. Concise and Detailed Response Modes
-Not every question needs the same depth of answer.
+### 3. Concise and Detailed response modes
 
-- **Concise mode:** A focused 2-4 sentence answer. Good for quick lookups or when you already know the topic.
-- **Detailed mode:** A structured, multi-section markdown response with headers, explanations, examples, and a summary. Good for understanding something deeply or preparing a writeup.
-- Switch between modes from the sidebar at any time mid-conversation.
+- Concise mode for quick, direct replies
+- Detailed mode for structured, expanded answers
+- Switch instantly from the sidebar
 
-### 4. Search Mode Toggles
-Fine-grained control over what the agent is allowed to use.
+### 4. Search mode is user controlled
 
-- **Document Search (RAG):** Toggle on/off to restrict or allow document queries
-- **Web Search:** Toggle on/off to restrict or allow live web queries
-- You can run in RAG-only mode (no web), web-only mode (no documents), or hybrid (both)
-- The agent automatically rebuilds when you change these settings
+This is an important behavior in this project:
 
-### 5. Multi-Provider LLM Support
-Switch between AI providers from the sidebar without restarting the app.
+- Users explicitly choose which tools are available through sidebar toggles
+- Document Search (RAG) can be enabled or disabled
+- Web Search can be enabled or disabled
+- The agent can only use tools that the user has enabled
 
-- **OpenAI (gpt-4o-mini)** — Default. Recommended for reliable tool calling and consistent responses. Uses a paid API key.
-- **Groq (llama-3.1-8b-instant)** — Free tier with generous rate limits. Good for general queries. Some Groq llama models have intermittent tool-call formatting issues; `llama-3.1-8b-instant` is the most stable.
-- **Gemini (gemini-1.5-flash)** — Available if you have a properly configured Google Cloud project with billing enabled. Free-tier AI Studio keys may hit quota limits depending on the account.
+So, tool access is under user control. The agent decides how to answer only within those selected limits.
 
-> **Note on OpenAI as default:** OpenAI's `gpt-4o-mini` is set as the default provider because it produces the most consistent tool-calling behavior and response quality. The project is designed to support all three providers — OpenAI just happens to be the most reliable choice for a live demo with a paid key.
+### 5. Multi-provider LLM support
 
-### 6. Persistent Session Memory
-The conversation context is maintained throughout your session.
+- Groq: llama-3.1-8b-instant
+- OpenAI: gpt-4o-mini
+- Gemini: gemini-2.5-flash
 
-- Built on **LangGraph's MemorySaver (InMemorySaver)** with thread-based checkpointing
-- Each browser session gets a unique `thread_id` so context is isolated per user
-- Message history is trimmed to the last 20 messages before each LLM call to avoid token limit errors in long conversations
-- Clearing the conversation resets memory and generates a new thread
+Default provider in the current codebase: Gemini.
 
----
+### 6. Session memory and context trimming
 
-## How the Agent Works
+- Uses MemorySaver with per-session thread_id
+- Keeps context manageable by trimming to recent messages
+- Supports long conversations without unbounded prompt growth
 
-The core of ResearchIQ is a **LangGraph ReAct agent** built with `create_react_agent`. Here is what happens from the moment you send a message:
+## How it works
 
-```
-User sends a message
-        │
-        ▼
-ReAct Agent receives query + conversation history
-        │
-        ├── Decides: does this need get_answer, search_web, both, or neither?
-        │
-        ├── Calls get_answer (RAG tool)
-        │       ├── Query embedded with all-MiniLM-L6-v2
-        │       ├── FAISS KNN search → top 7 chunks
-        │       └── Retrieval LLM (temp=0) → grounded answer with citations
-        │
-        ├── Calls search_web (Serper tool)
-        │       └── Google search results → titles, snippets, URLs
-        │
-        └── Response LLM (temp=0.3) composes final answer
-                │
-                ▼
-        Answer shown in chat with source citations
-```
+1. User sends a query
+2. App builds the toolset based on sidebar toggles
+3. If RAG is enabled, the agent can call get_answer
+4. If Web Search is enabled, the agent can call search_web
+5. Retrieved evidence is synthesized into final user-facing output
 
-### Why Two Separate LLMs?
+## Project structure
 
-The project uses two LLM instances intentionally:
-
-- **Retrieval LLM at temperature=0** — Used inside the `get_answer` tool when reading document chunks. Zero temperature means the model sticks exactly to what is written in the document. It will not creatively fill in gaps or extrapolate.
-- **Response LLM at temperature=0.3** — Used by the main agent to compose the final answer and handle conversation. A small amount of temperature gives responses natural language variation while remaining accurate.
-
-Using a single temperature for both would force a tradeoff between factuality and readability. The dual-LLM design avoids that.
-
----
-
-## Project Structure
-
-```
+```text
 project/
-│
-├── app.py                     # Streamlit UI — sidebar, chat loop, agent orchestration
-├── requirements.txt           # All Python dependencies with version pins
-├── README.md
-│
-├── config/
-│   └── config.py              # API keys (loaded from secrets), model names, RAG params
-│
-├── models/
-│   ├── llm.py                 # LLM factory — returns Groq/OpenAI/Gemini at given temperature
-│   └── embeddings.py          # HuggingFace embeddings setup (normalize_embeddings=True)
-│
-├── prompts/
-│   ├── agent_prompt.py        # Main agent system prompt + concise/detailed mode strings
-│   └── rag_prompt.py          # Retrieval LLM prompt (strict: answer only from given chunks)
-│
-├── utils/
-│   ├── rag_utils.py           # Document loading, chunking, FAISS indexing, KNN retrieval
-│   ├── search_utils.py        # Serper API call, result formatting, error handling
-│   ├── tools.py               # LangChain @tool definitions: get_answer and search_web
-│   └── agent_utils.py         # build_agent() and run_agent() using LangGraph
-│
-└── .streamlit/
-    ├── config.toml            # Dark theme, server settings
-    └── secrets.toml           # API keys — local only, never committed (gitignored)
+|-- app.py
+|-- requirements.txt
+|-- README.md
+|
+|-- config/
+|   `-- config.py
+|
+|-- models/
+|   |-- llm.py
+|   `-- embeddings.py
+|
+|-- prompts/
+|   |-- agent_prompt.py
+|   `-- rag_prompt.py
+|
+|-- utils/
+|   |-- rag_utils.py
+|   |-- search_utils.py
+|   |-- tools.py
+|   `-- agent_utils.py
+|
+`-- .streamlit/
+    `-- config.toml
 ```
 
----
-
-## Tech Stack
+## Tech stack
 
 | Component | Technology |
 |---|---|
-| Agent framework | LangGraph `create_react_agent` (langgraph.prebuilt) |
-| Session memory | LangGraph `MemorySaver` with thread-based checkpointing |
-| LLM — OpenAI | `langchain-openai` → `ChatOpenAI` (gpt-4o-mini) |
-| LLM — Groq | `langchain-groq` → `ChatGroq` (llama-3.1-8b-instant) |
-| LLM — Gemini | `langchain-google-genai` → `ChatGoogleGenerativeAI` (gemini-1.5-flash) |
-| Embeddings | HuggingFace `all-MiniLM-L6-v2` — local, runs on CPU, no API cost |
-| Vector store | FAISS — in-memory KNN similarity search |
-| Text splitting | `langchain-text-splitters` RecursiveCharacterTextSplitter |
-| Document loaders | LangChain PDF, DOCX, TXT loaders |
-| Web search | Serper API (Google Search) |
 | UI | Streamlit |
-| Deployment | Streamlit Cloud |
+| Agent orchestration | LangChain agent with tool calling |
+| Memory/checkpointing | LangGraph MemorySaver |
+| LLM integrations | langchain-openai, langchain-groq, langchain-google-genai |
+| Embeddings | langchain-huggingface (all-MiniLM-L6-v2) |
+| Vector store | FAISS |
+| Document loaders | PyPDFLoader, TextLoader, Docx2txtLoader |
+| Text splitting | RecursiveCharacterTextSplitter |
+| Web search | Serper API via requests |
 
----
-
-## Local Setup
+## Local setup
 
 ### Prerequisites
-- Python 3.9 or higher
-- At least one LLM API key (OpenAI recommended)
+
+- Python 3.9+
+- At least one LLM API key
 - Serper API key for web search
 
-### 1. Clone the repository
+### 1. Clone
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/researchiq-chatbot.git
-cd researchiq-chatbot
+git clone <your-repo-url>
+cd project
 ```
 
-### 2. Create a virtual environment
+### 2. Create and activate virtual environment
 
 ```bash
-python -m venv venv
+python -m venv .venv
 
-# Windows
-venv\Scripts\activate
+# Windows (PowerShell)
+.venv\Scripts\Activate.ps1
 
-# macOS / Linux
-source venv/bin/activate
+# Windows (Command Prompt)
+.venv\Scripts\activate
+
+# macOS/Linux
+source .venv/bin/activate
 ```
 
 ### 3. Install dependencies
@@ -189,35 +142,98 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-On first run, the HuggingFace embedding model (`all-MiniLM-L6-v2`) will be downloaded automatically — around 90MB, stored in your local HuggingFace cache.
+### 4. Configure API keys
 
-### 4. Set up API keys
+Create a .env file in the project root:
 
-Create the file `.streamlit/secrets.toml` in the project folder (this path is already in `.gitignore` — it will never be committed):
-
-```toml
-GROQ_API_KEY    = "your_groq_key"
-OPENAI_API_KEY  = "your_openai_key"
-GEMINI_API_KEY  = "your_gemini_key"
-SERPER_API_KEY  = "your_serper_key"
+```env
+GROQ_API_KEY=your_groq_key
+OPENAI_API_KEY=your_openai_key
+GEMINI_API_KEY=your_gemini_key
+SERPER_API_KEY=your_serper_key
+OPENROUTER_API_KEY=your_openrouter_key
 ```
 
-You only need the keys for the providers you plan to use. OpenAI + Serper is the recommended minimum.
+Do not commit keys to GitHub.
 
-| Service | Where to get it | Cost |
-|---|---|---|
-| OpenAI | [platform.openai.com](https://platform.openai.com) | Paid (pay-per-token) |
-| Groq | [console.groq.com](https://console.groq.com) | Free tier available |
-| Gemini | Google Cloud project with billing enabled | Free tier limited |
-| Serper | [serper.dev](https://serper.dev) | 2,500 free searches/month |
-
-### 5. Run the app
+### 5. Run
 
 ```bash
 streamlit run app.py
 ```
 
-Open `http://localhost:8501` in your browser.
+Then open http://localhost:8501.
+
+## Using the app
+
+1. Select provider from the sidebar
+2. Select response mode (Concise or Detailed)
+3. Choose search tools with toggles
+4. Upload documents if you want RAG-backed answers
+5. Ask questions in chat
+
+## Example prompts
+
+- Summarize this document in 5 bullet points.
+- What does this report say about risk factors?
+- Give me the latest updates on multimodal agents.
+- Compare what my document says with recent web findings.
+
+## Configuration reference
+
+Main settings live in config/config.py:
+
+- DEFAULT_LLM_PROVIDER
+- RETRIEVAL_TEMPERATURE
+- RESPONSE_TEMPERATURE
+- EMBEDDING_MODEL_NAME
+- CHUNK_SIZE
+- CHUNK_OVERLAP
+- TOP_K
+- MAX_HISTORY_MESSAGES
+- SERPER_NUM_RESULTS
+
+## Streamlit Cloud deployment
+
+1. Push your repository to GitHub
+2. Create a new app on Streamlit Cloud
+3. Set app entrypoint to app.py
+4. Configure environment variables/secrets in deployment settings
+5. Deploy and validate both RAG and web search flows
+
+## Security notes
+
+- Never commit API keys
+- Keep .env and secrets files out of version control
+- Rotate keys if they are accidentally exposed
+
+## Troubleshooting
+
+### Imports not resolved in editor
+
+Select the project virtual environment interpreter in VS Code.
+
+### No module named ...
+
+```bash
+pip install -r requirements.txt
+```
+
+### Web search not working
+
+Confirm SERPER_API_KEY is set and valid.
+
+### Gemini/OpenAI/Groq call failures
+
+Check selected provider key, model access, and quota limits.
+
+### Port already in use
+
+Run Streamlit on another port:
+
+```bash
+streamlit run app.py --server.port 8521
+```
 
 ---
 
