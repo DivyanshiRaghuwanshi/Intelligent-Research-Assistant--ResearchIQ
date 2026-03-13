@@ -1,10 +1,10 @@
 from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
-
+from langchain_openrouter import ChatOpenRouter
 from config.config import (
-    GROQ_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY,
-    GROQ_MODEL_NAME, OPENAI_MODEL_NAME, GEMINI_MODEL_NAME,
+    GROQ_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, OPEN_ROUTER_API_KEY,
+    GROQ_MODEL_NAME, OPENAI_MODEL_NAME, GEMINI_MODEL_NAME, OPENROUTER_MODEL_NAME,
     RETRIEVAL_TEMPERATURE, RESPONSE_TEMPERATURE,
     DEFAULT_LLM_PROVIDER,
 )
@@ -20,7 +20,7 @@ def get_llm(provider=None, temperature=RESPONSE_TEMPERATURE):
         elif provider == "gemini":
             return ChatGoogleGenerativeAI(google_api_key=GEMINI_API_KEY, model=GEMINI_MODEL_NAME, temperature=temperature)
         else:
-            raise ValueError(f"Unknown provider '{provider}'. Choose: groq, openai, gemini.")
+            raise ValueError(f"Unknown provider '{provider}'. Choose: groq, openai, gemini, openrouter.")
     except ValueError:
         raise
     except Exception as e:

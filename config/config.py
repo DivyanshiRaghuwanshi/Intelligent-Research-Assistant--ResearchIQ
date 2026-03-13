@@ -1,4 +1,6 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # API keys — read from Streamlit secrets first, then env vars, then empty string.
 # For local dev: add keys to .streamlit/secrets.toml (already in .gitignore)
@@ -10,18 +12,24 @@ def _secret(key):
     except Exception:
         return os.environ.get(key, "")
 
-GROQ_API_KEY   = _secret("GROQ_API_KEY")
-OPENAI_API_KEY = _secret("OPENAI_API_KEY")
-GEMINI_API_KEY = _secret("GEMINI_API_KEY")
-SERPER_API_KEY = _secret("SERPER_API_KEY")
+# GROQ_API_KEY   = _secret("GROQ_API_KEY")
+# OPENAI_API_KEY = _secret("OPENAI_API_KEY")
+# GEMINI_API_KEY = _secret("GEMINI_API_KEY")
+# SERPER_API_KEY = _secret("SERPER_API_KEY")
+
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+SERPER_API_KEY = os.getenv("SERPER_API_KEY")
+OPEN_ROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 # LLM settings
 DEFAULT_LLM_PROVIDER = "openai"
 
 GROQ_MODEL_NAME   = "llama-3.1-8b-instant"
 OPENAI_MODEL_NAME = "gpt-4o-mini"
-GEMINI_MODEL_NAME = "gemini-1.5-flash"
-
+GEMINI_MODEL_NAME = "gemini-2.5-flash"
+OPENROUTER_MODEL_NAME = "openai/gpt-5.4-pro"
 # temperature=0 for retrieval (factual), 0.3 for response (slight creativity)
 RETRIEVAL_TEMPERATURE = 0.0
 RESPONSE_TEMPERATURE  = 0.3
@@ -36,3 +44,4 @@ TOP_K         = 7   # KNN top-k chunks to retrieve
 MAX_HISTORY_MESSAGES = 20
 
 SERPER_NUM_RESULTS = 5
+
