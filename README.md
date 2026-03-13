@@ -2,7 +2,7 @@
 
 ResearchIQ is a Streamlit-based assistant built for the NeoStats AI Engineer use case. It combines document Q&A (RAG) with live web search and supports Groq, OpenAI, and Gemini in one interface.
 
-Live Demo: Add your Streamlit Cloud link here after deployment.
+Live Demo: https://intelligent-research-assistant--researchiq-mj5nt7la2xgpwmurt5r.streamlit.app/
 
 ## Why this project
 
