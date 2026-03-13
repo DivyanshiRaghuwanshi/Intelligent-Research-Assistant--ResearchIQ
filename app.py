@@ -94,14 +94,15 @@ def _init_session_state():
 _init_session_state()
 
 
-def _agent_fingerprint(provider, response_mode, doc_loaded):
-    return f"{provider}|{response_mode}|{doc_loaded}"
+def _agent_fingerprint(provider, response_mode, doc_loaded, use_rag, use_web):
+    model = {"groq": cfg.GROQ_MODEL_NAME, "openai": cfg.OPENAI_MODEL_NAME, "gemini": cfg.GEMINI_MODEL_NAME}.get(provider, "")
+    return f"{provider}|{model}|{response_mode}|{doc_loaded}|{use_rag}|{use_web}"
 
 
-def _build_or_rebuild_agent(provider, response_mode):
-    """Builds the agent, or rebuilds it if provider/mode/docs changed."""
+def _build_or_rebuild_agent(provider, response_mode, use_rag, use_web):
+    """Builds the agent, or rebuilds it if provider/mode/docs/tools changed."""
     doc_loaded  = st.session_state.vectorstore is not None
-    fingerprint = _agent_fingerprint(provider, response_mode, doc_loaded)
+    fingerprint = _agent_fingerprint(provider, response_mode, doc_loaded, use_rag, use_web)
 
     if st.session_state.agent and st.session_state.agent_config == fingerprint:
         return  # nothing changed, reuse existing agent
@@ -110,13 +111,18 @@ def _build_or_rebuild_agent(provider, response_mode):
         retrieval_llm = get_retrieval_llm(provider)
         response_llm  = get_response_llm(provider)
 
-        tools = [
-            create_get_answer_tool(
+        tools = []
+        if use_rag:
+            tools.append(create_get_answer_tool(
                 vectorstore=st.session_state.vectorstore,
                 retrieval_llm=retrieval_llm,
-            ),
-            create_search_web_tool(),
-        ]
+            ))
+        if use_web:
+            tools.append(create_search_web_tool())
+
+        if not tools:
+            st.warning("Enable at least one search mode to get answers.")
+            return
 
         agent = build_agent(
             response_llm=response_llm,
@@ -148,7 +154,7 @@ with st.sidebar:
     provider = st.selectbox(
         "LLM Provider",
         options=["groq", "openai", "gemini"],
-        index=2,
+        index=1,
         help="Choose which model powers the assistant.",
     )
 
@@ -168,7 +174,12 @@ with st.sidebar:
 
     st.divider()
 
-    # Document upload
+    # Search mode toggles
+    st.markdown("**Search Mode**")
+    use_rag = st.checkbox("Document Search (RAG)", value=True, help="Search your uploaded documents for answers.")
+    use_web = st.checkbox("Web Search", value=True, help="Search the web for current or real-time information.")
+
+    st.divider()
     st.markdown("**Upload Knowledge Base**")
     st.caption("PDF, TXT, or DOCX. Multiple files supported.")
 
@@ -291,7 +302,7 @@ if user_input:
     with st.chat_message("user"):
         st.markdown(user_input)
 
-    _build_or_rebuild_agent(provider, response_mode)
+    _build_or_rebuild_agent(provider, response_mode, use_rag, use_web)
 
     if st.session_state.agent is None:
         with st.chat_message("assistant"):
