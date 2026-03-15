@@ -164,86 +164,13 @@ streamlit run app.py
 
 Then open http://localhost:8501.
 
-## Using the app
-
-1. Select provider from the sidebar
-2. Select response mode (Concise or Detailed)
-3. Choose search tools with toggles
-4. Upload documents if you want RAG-backed answers
-5. Ask questions in chat
-
-## Example prompts
-
-- Summarize this document in 5 bullet points.
-- What does this report say about risk factors?
-- Give me the latest updates on multimodal agents.
-- Compare what my document says with recent web findings.
-
-## Configuration reference
-
-Main settings live in config/config.py:
-
-- DEFAULT_LLM_PROVIDER
-- RETRIEVAL_TEMPERATURE
-- RESPONSE_TEMPERATURE
-- EMBEDDING_MODEL_NAME
-- CHUNK_SIZE
-- CHUNK_OVERLAP
-- TOP_K
-- MAX_HISTORY_MESSAGES
-- SERPER_NUM_RESULTS
-
-## Streamlit Cloud deployment
-
-1. Push your repository to GitHub
-2. Create a new app on Streamlit Cloud
-3. Set app entrypoint to app.py
-4. Configure environment variables/secrets in deployment settings
-5. Deploy and validate both RAG and web search flows
-
-## Security notes
-
-- Never commit API keys
-- Keep .env and secrets files out of version control
-- Rotate keys if they are accidentally exposed
-
-## Troubleshooting
-
-### Imports not resolved in editor
-
-Select the project virtual environment interpreter in VS Code.
-
-### No module named ...
-
-```bash
-pip install -r requirements.txt
-```
-
-### Web search not working
-
-Confirm SERPER_API_KEY is set and valid.
-
-### Gemini/OpenAI/Groq call failures
-
-Check selected provider key, model access, and quota limits.
-
-### Port already in use
-
-Run Streamlit on another port:
-
-```bash
-streamlit run app.py --server.port 8521
-```
-
----
-
 ## Using the App
 
-1. **Select LLM Provider** from the sidebar (OpenAI is default and recommended).
+1. **Select LLM Provider** from the sidebar (Gemini is the default).
 2. **Choose Response Mode** — Concise for quick answers, Detailed for structured explanations.
-3. **Search Mode** — Both RAG and web search are enabled by default. Uncheck either to restrict the agent to one source.
+3. **Search Mode** — Toggle Document Search (RAG) and Web Search on or off. The agent only uses tools you have enabled.
 4. **Upload Documents** — Drag your PDFs, Word files, or text files into the upload box. You'll see a chunk count confirming the index was built.
-5. **Start chatting** — Ask anything. The agent will pick the right tool automatically.
+5. **Start chatting** — Ask anything. The agent uses the tools you have enabled to find and compose an answer.
 
 ### Example Queries
 
@@ -269,7 +196,7 @@ All tunable parameters live in `config/config.py`:
 
 | Parameter | Default | What it controls |
 |---|---|---|
-| `DEFAULT_LLM_PROVIDER` | `"openai"` | Which provider loads on startup |
+| `DEFAULT_LLM_PROVIDER` | `"gemini"` | Which provider loads on startup |
 | `RETRIEVAL_TEMPERATURE` | `0.0` | LLM temperature for RAG extraction (factual) |
 | `RESPONSE_TEMPERATURE` | `0.3` | LLM temperature for final agent response |
 | `CHUNK_SIZE` | `1000` | Characters per document chunk |
@@ -324,7 +251,7 @@ LangGraph's `create_react_agent` with `MemorySaver` gives proper checkpoint-base
 FAISS is in-memory and has zero infrastructure overhead. For a single-session demo, it's perfectly appropriate. The architecture is modular enough that swapping FAISS for Pinecone or Weaviate would only require changing `rag_utils.py` — the rest of the system doesn't care.
 
 **Why two separate LLM instances at different temperatures?**
-Covered in the architecture section above. Short version: temperature=0 for fact extraction from documents, temperature=0.3 for conversational responses. Mixing these would compromise one or the other.
+temperature=0 for fact extraction from documents, temperature=0.3 for conversational responses. Mixing these would compromise one or the other.
 
 ---
 
